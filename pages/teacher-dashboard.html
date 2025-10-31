@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher Dashboard</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="dashboard">
+    <h1>Teacher Dashboard</h1>
+    <button id="logoutBtn">Logout</button>
+
+    <!-- Pending Appointments -->
+    <section>
+      <h2>Pending Appointments</h2>
+      <div id="pendingAppointments">Loading...</div>
+    </section>
+
+    <!-- Done Appointments -->
+    <section>
+      <h2>Done Appointments</h2>
+      <div id="doneAppointments">Loading...</div>
+    </section>
+
+    <!-- Messaging -->
+    <section>
+      <h2>Send Message</h2>
+      <select id="studentSelect">
+        <option value="">Select Student</option>
+      </select>
+      <input type="text" id="messageText" placeholder="Type your message">
+      <button id="sendMessageBtn">Send</button>
+
+      <h3>Message History</h3>
+      <div id="messagesList">No messages yet</div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { auth, db } from "../js/firebase-config.js";
+    import { logoutUser } from "../js/auth.js";
+    import { getAppointments, markAppointmentDone } from "../js/appointment.js";
+    import { sendMessage, getMessages } from "../js/messages.js";
+    import { collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    document.getElementById("logoutBtn").addEventListener("click", logoutUser);
+
+    // Load appointments
+    async function loadAppointments() {
+      const pendingContainer = document.getElementById("pendingAppointments");
+      const doneContainer = document.getElementById("doneAppointments");
+      pendingContainer.innerHTML = "Loading...";
+      doneContainer.innerHTML = "Loading...";
+
+      try {
+        const list = await getAppointments("teacher");
+        pendingContainer.innerHTML = "";
+        doneContainer.innerHTML = "";
+
+        if (!list || list.length === 0) {
+          pendingContainer.innerHTML = "<p>No appointments</p>";
+          doneContainer.innerHTML = "<p>No appointments</p>";
+          return;
+        }
+
+        for (const app of list) {
+          // Fetch student name
+          let studentName = app.studentId;
+          try {
+            const studentDoc = await getDoc(doc(db, "users", app.studentId));
+            if (studentDoc.exists()) studentName = studentDoc.data().name || studentDoc.data().email;
+          } catch (err) { console.error("Error fetching student:", err); }
+
+          const div = document.createElement("div");
+          div.className = "appointment-card";
+          div.innerHTML = `
+            <p><b>Student:</b> ${studentName}</p>
+            <p><b>Date:</b> ${app.date}</p>
+            <p><b>Time:</b> ${app.time}</p>
+            <p><b>Status:</b> ${app.status}</p>
+            ${app.status === "pending" ? `<button class="doneBtn" data-id="${app.id}">Mark as Done</button>` : ""}
+          `;
+
+          if (app.status === "pending") pendingContainer.appendChild(div);
+          else doneContainer.appendChild(div);
+        }
+
+        // Add event listeners for "Mark as Done"
+        document.querySelectorAll(".doneBtn").forEach(btn => {
+          btn.addEventListener("click", async (e) => {
+            const id = e.target.getAttribute("data-id");
+            await markAppointmentDone(id);
+            loadAppointments();
+          });
+        });
+
+        loadStudentsDropdown(list); // Load students for messaging
+      } catch (err) {
+        pendingContainer.innerHTML = "<p>Error loading appointments</p>";
+        doneContainer.innerHTML = "<p>Error loading appointments</p>";
+        console.error(err);
+      }
+    }
+
+    // Load students for messaging dropdown
+    function loadStudentsDropdown(appointments) {
+      const select = document.getElementById("studentSelect");
+      select.innerHTML = `<option value="">Select Student</option>`;
+      const added = new Set();
+      appointments.forEach(app => {
+        if (!added.has(app.studentId)) {
+          const opt = document.createElement("option");
+          opt.value = app.studentId;
+          opt.textContent = app.studentId; // We'll replace with name when fetching
+          select.appendChild(opt);
+          added.add(app.studentId);
+        }
+      });
+
+      // Fetch names asynchronously
+      Array.from(select.options).forEach(async (opt) => {
+        if (opt.value) {
+          try {
+            const docSnap = await getDoc(doc(db, "users", opt.value));
+            if (docSnap.exists()) opt.textContent = docSnap.data().name || docSnap.data().email;
+          } catch (err) { console.error("Error fetching student name:", err); }
+        }
+      });
+    }
+
+    // Send message
+    document.getElementById("sendMessageBtn").addEventListener("click", async () => {
+      const studentId = document.getElementById("studentSelect").value;
+      const message = document.getElementById("messageText").value.trim();
+      if (!studentId || !message) {
+        alert("Select student and type a message!");
+        return;
+      }
+
+      try {
+        await sendMessage(auth.currentUser.uid, studentId, message);
+        document.getElementById("messageText").value = "";
+        loadMessages(studentId);
+      } catch (err) {
+        alert("Error sending message: " + err.message);
+      }
+    });
+
+    // Load messages with specific student
+    async function loadMessages(studentId) {
+      const container = document.getElementById("messagesList");
+      container.innerHTML = "Loading messages...";
+      try {
+        const msgs = await getMessages(auth.currentUser.uid, studentId);
+        container.innerHTML = "";
+        if (!msgs || msgs.length === 0) {
+          container.innerHTML = "<p>No messages yet</p>";
+          return;
+        }
+
+        for (const m of msgs) {
+          const div = document.createElement("div");
+          div.className = "message-card";
+          div.innerHTML = `<b>${m.senderId === auth.currentUser.uid ? "You" : "Student"}:</b> ${m.message}`;
+          container.appendChild(div);
+        }
+      } catch (err) {
+        container.innerHTML = "<p>Error loading messages</p>";
+        console.error(err);
+      }
+    }
+
+    // When student dropdown changes, load messages
+    document.getElementById("studentSelect").addEventListener("change", (e) => {
+      const studentId = e.target.value;
+      if (studentId) loadMessages(studentId);
+      else document.getElementById("messagesList").innerHTML = "No student selected";
+    });
+
+    // Initialize
+    auth.onAuthStateChanged(user => {
+      if (user) loadAppointments();
+      else window.location.href = "../index.html";
+    });
+  </script>
+</body>
+</html>

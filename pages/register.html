@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="form-container">
+    <h2>Register</h2>
+
+    <input type="text" id="name" placeholder="Full Name">
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+
+    <select id="role">
+      <option value="">Select Role</option>
+      <option value="student">Student</option>
+      <option value="teacher">Teacher</option>
+    </select>
+
+    <!-- These fields appear only if role = teacher -->
+    <div id="teacherFields" style="display:none;">
+      <input type="text" id="department" placeholder="Department">
+      <input type="text" id="subject" placeholder="Subject">
+    </div>
+
+    <button id="registerBtn">Register</button>
+    <p>Already have an account? <a href="index.html">Login</a></p>
+  </div>
+
+  <script type="module">
+    import { registerUser } from "../js/auth.js";
+
+    const roleSelect = document.getElementById("role");
+    const teacherFields = document.getElementById("teacherFields");
+
+    roleSelect.addEventListener("change", () => {
+      if (roleSelect.value === "teacher") teacherFields.style.display = "block";
+      else teacherFields.style.display = "none";
+    });
+
+    document.getElementById("registerBtn").addEventListener("click", async () => {
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const role = roleSelect.value;
+      const department = document.getElementById("department").value.trim();
+      const subject = document.getElementById("subject").value.trim();
+
+      if (!name || !email || !password || !role) {
+        alert("Please fill all required fields!");
+        return;
+      }
+
+      // For students, department/subject are optional
+      await registerUser({ name, email, password, role, department, subject });
+    });
+  </script>
+</body>
+</html>

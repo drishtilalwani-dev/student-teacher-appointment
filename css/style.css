@@ -1,0 +1,191 @@
+/* ========== GLOBAL STYLES ========== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #333;
+}
+
+/* ========== CARD / CONTAINER ========== */
+.form-container, .dashboard {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  padding: 40px 30px;
+  width: 90%;
+  max-width: 450px;
+  text-align: center;
+  transition: all 0.3s ease-in-out;
+}
+
+.dashboard {
+  max-width: 800px;
+  text-align: left;
+}
+
+/* ========== TITLES ========== */
+h1, h2 {
+  color: #3a0ca3;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+h1 {
+  font-size: 2rem;
+}
+
+h2 {
+  font-size: 1.3rem;
+  margin-top: 20px;
+}
+
+/* ========== INPUTS ========== */
+input, select {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 8px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 1px #ccc;
+  font-size: 1rem;
+  transition: box-shadow 0.2s;
+}
+
+input:focus, select:focus {
+  box-shadow: 0 0 0 2px #3a0ca3;
+}
+
+/* ========== BUTTONS ========== */
+button {
+  background: linear-gradient(135deg, #3a0ca3, #7209b7);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: transform 0.2s, background 0.3s;
+}
+
+button:hover {
+  transform: scale(1.05);
+  background: linear-gradient(135deg, #4cc9f0, #7209b7);
+}
+
+/* ========== LINKS ========== */
+a {
+  color: #3a0ca3;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ========== APPOINTMENT CARDS ========== */
+.appointment-card, .user-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-left: 4px solid #7209b7;
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s;
+}
+
+.appointment-card:hover, .user-card:hover {
+  transform: translateY(-3px);
+}
+
+.appointment-card p, .user-card p {
+  margin: 6px 0;
+  font-size: 0.95rem;
+}
+
+/* ========== DASHBOARD LAYOUT ========== */
+.dashboard section {
+  margin-top: 25px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.dashboard button {
+  margin: 10px 0;
+}
+
+/* ========== LOGOUT BUTTON ========== */
+#logoutBtn {
+  float: right;
+  background: #ef233c;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+#logoutBtn:hover {
+  background: #d90429;
+  transform: none;
+}
+
+/* ========== SMALL SCREEN FIXES ========== */
+@media (max-width: 600px) {
+  .dashboard, .form-container {
+    padding: 20px;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+  }
+}
+
+
+.appointment-card, .user-card {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 10px 0;
+  background: #f9f9f9;
+}
+.user-card {
+      background: #fff;
+      padding: 1rem;
+      margin: 10px 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .status {
+      font-weight: bold;
+    }
+    .status.approved {
+      color: green;
+    }
+    .status.pending {
+      color: orange;
+    }
+    button {
+      margin: 5px;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .approveBtn { background-color: #4caf50; color: white; }
+    .editBtn { background-color: #2196f3; color: white; }
+    .deleteBtn { background-color: #f44336; color: white; }
+

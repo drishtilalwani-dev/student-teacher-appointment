@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Dashboard</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="dashboard">
+    <h1>Student Dashboard</h1>
+    <button id="logoutBtn">Logout</button>
+
+    <!-- Book Appointment -->
+    <section>
+      <h2>Book Appointment</h2>
+      <select id="teacherId">
+        <option value="">Select Teacher</option>
+      </select>
+      <input type="date" id="date">
+      <input type="time" id="time">
+      <button id="bookBtn">Book</button>
+    </section>
+
+    <!-- Appointments -->
+    <section>
+      <h2>Your Appointments</h2>
+      <div id="appointmentsList">Loading...</div>
+    </section>
+
+    <!-- Messages -->
+    <section>
+      <h2>Send Message</h2>
+      <select id="messageTeacher">
+        <option value="">Select Teacher</option>
+      </select>
+      <input type="text" id="messageText" placeholder="Type your message">
+      <button id="sendMessageBtn">Send</button>
+
+      <h3>Message History</h3>
+      <div id="messagesList">No messages yet</div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { auth, db } from "../js/firebase-config.js";
+    import { logoutUser } from "../js/auth.js";
+    import { bookAppointment, getAppointments } from "../js/appointment.js";
+    import { sendMessage, getMessages } from "../js/messages.js";
+    import { collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", logoutUser);
+
+    // Load approved teachers for dropdown
+    async function loadTeachers() {
+      const teacherSelect = document.getElementById("teacherId");
+      const messageSelect = document.getElementById("messageTeacher");
+      teacherSelect.innerHTML = `<option value="">Select Teacher</option>`;
+      messageSelect.innerHTML = `<option value="">Select Teacher</option>`;
+
+      try {
+        const snapshot = await getDocs(collection(db, "users"));
+        snapshot.forEach(d => {
+          const t = d.data();
+          if (t.role === "teacher" && t.status === "approved") {
+            const opt1 = document.createElement("option");
+            opt1.value = d.id;
+            opt1.textContent = t.name || t.email;
+            teacherSelect.appendChild(opt1);
+
+            const opt2 = document.createElement("option");
+            opt2.value = d.id;
+            opt2.textContent = t.name || t.email;
+            messageSelect.appendChild(opt2);
+          }
+        });
+      } catch (err) {
+        console.error("Error loading teachers:", err);
+      }
+    }
+
+    // Book appointment
+    document.getElementById("bookBtn").addEventListener("click", async () => {
+      const teacherId = document.getElementById("teacherId").value;
+      const date = document.getElementById("date").value;
+      const time = document.getElementById("time").value;
+
+      if (!teacherId || !date || !time) {
+        alert("Please fill all fields!");
+        return;
+      }
+
+      try {
+        await bookAppointment({
+          studentId: auth.currentUser.uid,
+          teacherId,
+          date,
+          time
+        });
+        alert("Appointment booked!");
+        loadAppointments();
+      } catch (err) {
+        alert("Error booking appointment: " + err.message);
+      }
+    });
+
+    // Load student appointments
+    async function loadAppointments() {
+      const container = document.getElementById("appointmentsList");
+      container.innerHTML = "Loading...";
+      try {
+        const list = await getAppointments("student");
+        container.innerHTML = "";
+        if (!list || list.length === 0) {
+          container.innerHTML = "<p>No appointments yet.</p>";
+          return;
+        }
+
+        for (const app of list) {
+          let teacherName = app.teacherId;
+          try {
+            const teacherDoc = await getDoc(doc(db, "users", app.teacherId));
+            if (teacherDoc.exists()) teacherName = teacherDoc.data().name || teacherDoc.data().email;
+          } catch (err) { console.error("Error fetching teacher:", err); }
+
+          const div = document.createElement("div");
+          div.className = "appointment-card";
+          div.innerHTML = `
+            <p><b>Teacher:</b> ${teacherName}</p>
+            <p><b>Date:</b> ${app.date}</p>
+            <p><b>Time:</b> ${app.time}</p>
+            <p><b>Status:</b> ${app.status === "done" ? "✅ Done" : "Pending"}</p>
+          `;
+          container.appendChild(div);
+        }
+      } catch (err) {
+        container.innerHTML = "<p>Error loading appointments</p>";
+        console.error(err);
+      }
+    }
+
+    // Send message
+    document.getElementById("sendMessageBtn").addEventListener("click", async () => {
+      const teacherId = document.getElementById("messageTeacher").value;
+      const message = document.getElementById("messageText").value.trim();
+      if (!teacherId || !message) {
+        alert("Select teacher and type a message!");
+        return;
+      }
+
+      try {
+        await sendMessage(auth.currentUser.uid, teacherId, message);
+        document.getElementById("messageText").value = "";
+        loadMessages(teacherId);
+      } catch (err) {
+        alert("Error sending message: " + err.message);
+      }
+    });
+
+    // Load messages with a specific teacher
+    async function loadMessages(teacherId) {
+      const container = document.getElementById("messagesList");
+      container.innerHTML = "Loading messages...";
+      try {
+        const msgs = await getMessages(auth.currentUser.uid, teacherId);
+        container.innerHTML = "";
+        if (!msgs || msgs.length === 0) {
+          container.innerHTML = "<p>No messages yet</p>";
+          return;
+        }
+        msgs.forEach(m => {
+          const div = document.createElement("div");
+          div.className = "message-card";
+          div.innerHTML = `<b>${m.senderId === auth.currentUser.uid ? "You" : "Teacher"}:</b> ${m.message}`;
+          container.appendChild(div);
+        });
+      } catch (err) {
+        container.innerHTML = "<p>Error loading messages</p>";
+        console.error(err);
+      }
+    }
+
+    // When teacher dropdown changes in message section, reload messages
+    document.getElementById("messageTeacher").addEventListener("change", (e) => {
+      const teacherId = e.target.value;
+      if (teacherId) loadMessages(teacherId);
+      else document.getElementById("messagesList").innerHTML = "No teacher selected";
+    });
+
+    // Initialize
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        loadTeachers();
+        loadAppointments();
+      } else {
+        window.location.href = "../index.html";
+      }
+    });
+
+  </script>
+</body>
+</html>
